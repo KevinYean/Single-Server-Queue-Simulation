@@ -9,13 +9,13 @@ namespace Assignment4COEN320
 {
     /**
      * Needed:
-     * Complete - 1) A random number generator. Use the pseudo code on page 443 or 444 of the textbook by R.Jain. 
-     * Complete - 2) A routine to generate exponentially distributed random numbers.
-     * 3) A routine to compute the waiting time in the queue (use the formula)
-     * 4) A routine to collect data.
-     * 5) A routine to reduce data
-     * 6) A routine to copmute the teoretical result of the M/M/1 queue on page 16 of the Simulation paper.
-     * 7) Main part of the program.
+     * Complete -1) A random number generator. Use the pseudo code on page 443 or 444 of the textbook by R.Jain. 
+     * Complete -2) A routine to generate exponentially distributed random numbers.
+     * Complete -3) A routine to compute the waiting time in the queue (use the formula)
+     * Complete -4) A routine to collect data.
+     * Complete -5) A routine to reduce data
+     * Complete -6) A routine to copmute the theoretical result of the M/M/1 queue on page 16 of the Simulation paper.
+     * Complete -7) Main part of the program.
      * 
      * Customer Arrival Stream Seed: 727,633,698
      * Customer Service Completion Seed: 1,335,826,707
@@ -26,28 +26,24 @@ namespace Assignment4COEN320
     class Program
     {
         //--------------Variables---------------
-        //Others
-        int m = 100000;//The number of measurements
-        double utilization = 0;
+        //Measurement Number
+        int m = 10000;
 
         //Waiting Time
-        double waitingAverage;
+        double totalWaitingTime;
         List<double> wList = new List<double>(); //Waiting Time List
 
         //Interarrival Time------
         int aExpectedValue =200; //The expected value of the interarrival times
         int arrivalSeed = 727633698;
-        double arrivalAverage = 0;
+        double totalArrivalTime = 0;
         List<double> aList = new List<double>();
 
         //Service Time------
         int sExpectedValue = 100; //The expected value of the service times
         int serviceSeed = 1335826707;
-        double serviceAverage = 0;
+        double totalServiceTime = 0;
         List<double> sList = new List<double>();
-
-        //Theoretical results
-
 
         static void Main(string[] args)
         {
@@ -56,54 +52,54 @@ namespace Assignment4COEN320
 
         public Program()
         {
-            Console.WriteLine("Beginning the Single Server Queue...");
+            Console.WriteLine("Beginning the Single Server Queue...\n");
 
-            //-----------------Interarrival Times Generation-------------------------
+
+            //Generating Customers
+            for(int i = 0; i < m; i++)
             {
-                Console.WriteLine("--------Interarrival");
-                generateValues(arrivalSeed, aExpectedValue, ref arrivalAverage, aList);
-                Console.WriteLine("Avg:"+arrivalAverage);
-               
+                int customerNumber = i;
+                arrivalSeed = generateValue(arrivalSeed, aExpectedValue,ref totalArrivalTime, aList); //Generate value for arrival time of customer i
+                serviceSeed = generateValue(serviceSeed, sExpectedValue,ref totalServiceTime, sList); //Generate value for service time of customer i
+                waitingTime(customerNumber); //Calculate waiting time for customer i
             }
-            //-----------------Service Times Generation-------------------------
-            {
-                Console.WriteLine("--------Service Time");
-                generateValues(serviceSeed, sExpectedValue, ref serviceAverage, sList);
-                Console.WriteLine("Avg:"+serviceAverage);
-            }
-            //-----------------Waiting Lines--------------------------------------
-            {
-                Console.WriteLine("--------Waiting Time");
-                waitingLine(ref waitingAverage);
-                Console.WriteLine("Avg:"+waitingAverage);
-            }
-            //-----------------Other---------------------------------------------------
-            utilization = serviceAverage / arrivalAverage;
-            Console.WriteLine("Utilization: " + utilization);
+
+            //Results
+            Console.WriteLine("---Simulation Results:");
+            Console.WriteLine("Arrival Seed: " + arrivalSeed);
+            Console.WriteLine("Arrival Expected Value: " + aExpectedValue);
+            Console.WriteLine("Service Seed: " + serviceSeed);
+            Console.WriteLine("Service Expected Value: " + sExpectedValue);
+            Console.WriteLine();
+
+            Console.WriteLine("m: " + m);
+            Console.WriteLine("Average s: " + totalServiceTime/m);
+            Console.WriteLine("Average a: " + totalArrivalTime/m);
+            Console.WriteLine("Average w: " + totalWaitingTime/m);
+            Console.WriteLine("Utilization: " + (totalServiceTime/m)/(totalArrivalTime/m));
+
+            Console.WriteLine();
+            Console.WriteLine("------Theoretical Results:");
             Console.WriteLine(getTheoreticalResultsToString());
 
             Console.ReadLine();
         }
 
-        public void generateValues(int seed, int expectedValue,ref double average, List<double> gList)
+        /*Generates one value given its seed and expected value and return that new value of the seed. Adds value to the list that was referenced.
+         */ 
+        public int generateValue(int seed, int expectedValue,ref double averageRef, List<double> gList)
         {
-            int w = seed;
-
-            for (int i = 0; i < m; i++)
-            {
-                w = random(w); //Generates a new number given this seed;
-                double zeroToOne = w / 2147483647.0;
-                double value = (exponentiallyRandom(zeroToOne, expectedValue));
-                average += value;
-                //Console.WriteLine(value);
-                gList.Add(value);
-            }
-            average = average / m;
+            int w = randomNumberGenerator(seed);
+            double zeroToOne = w / 2147483647.0;
+            double value = (generateExponentiallyRandom(zeroToOne, expectedValue));
+            averageRef += value;
+            gList.Add(value);
+            return w; //Return the new seed number
         }
 
         /**Random number generator using interger arithmetic based on figure 26.2 of Jain. 
         **/
-        public int random(int x) //x is the seed
+        public int randomNumberGenerator(int x) //x is the seed
         {
             //Const
             const int a = 16807; //Multiplier
@@ -116,54 +112,41 @@ namespace Assignment4COEN320
             x_div_q = x / q;
             x_mod_q = x % q;
             x_new = a * x_mod_q - r * x_div_q;
-            if (x_new > 0)
-            {
+            if (x_new > 0){
                 x = x_new;
             }
-            else
-            {
+            else{
                 x = x_new + m;
             }
             return x;
         }
 
         /**Convert the 0 to 1 Uniform distribution to an exponetially distributed random number
-         * 
          **/
-        public double exponentiallyRandom(double x, double expectedValue)
+        public double generateExponentiallyRandom(double x, double expectedValue)
         {
             double lambda = 1.0 /expectedValue;
             x = -(1.0 / lambda) * Math.Log(1.0 - x); //From http://www.ece.virginia.edu/mv/edu/prob/stat/random-number-generation.pdf
             return x;
         }
 
-        /**Calculates the waiting line between the Arrival and Service time
+        /** Calculate the waitingLine for a specific customer
          **/
-        public void waitingLine(ref double waitingAverage)
+        public void waitingTime(int customerNumber)
         {
-            for(int n = 0; n < m; n++)
-            {
-                if(n == 0)
-                {
+            if (customerNumber == 0){
+                wList.Add(0);
+            }
+            else{
+                double wTime = (wList[customerNumber - 1] + sList[customerNumber - 1] - aList[customerNumber - 1]);
+                if (wTime < 0){
                     wList.Add(0);
-                    //Console.WriteLine(0);
                 }
-                else
-                {
-                    double wTime = (wList[n - 1] + sList[n - 1] - aList[n - 1]);
-                    if( wTime < 0)
-                    {
-                        wList.Add(0);
-                    }
-                    else
-                    {
-                        wList.Add(wTime);
-                        waitingAverage = waitingAverage + wTime;
-                    }
-                    //Console.WriteLine(wTime);
+                else{
+                    wList.Add(wTime);
+                    totalWaitingTime += wTime; //Adds to the total waiting time of all customers
                 }
             }
-            waitingAverage = waitingAverage / m;
         }
 
         public string getTheoreticalResultsToString()
@@ -172,11 +155,11 @@ namespace Assignment4COEN320
             double mu = 1f / sExpectedValue;
             double rho = lambda/mu;
             double wq = rho / (mu*(1f - rho));
-            double w = wq + 1f / mu;
+            double w = wq + (1f / mu);
             double lq = lambda * wq;
             double l = lambda * w;
 
-            String result = "---Theoretical Results: \n" +
+            String result =
                    "Lambda: " + lambda + "\n" +
                    "Mu: " + mu + "\n" +
                    "Utilization: Rho =  " + rho + "\n" +
